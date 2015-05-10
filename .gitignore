@@ -1,0 +1,9 @@
+# directories
+bin
+obj
+packages
+
+# files
+*.GhostDoc.xml
+*.suo
+DataImporter/Data/OnTimePerformance/*.csv
