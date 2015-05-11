@@ -54,7 +54,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="OnTimePerformance.cs" />
+    <Compile Include="Airline.cs" />
+    <Compile Include="Airport.cs" />
+    <Compile Include="Flight.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

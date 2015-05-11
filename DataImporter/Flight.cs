@@ -1,12 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace DataImporter
 {
-    public class OnTimePerformance
+    public class Flight
     {
         public int? YEAR { get; set; }
         public int? QUARTER { get; set; }

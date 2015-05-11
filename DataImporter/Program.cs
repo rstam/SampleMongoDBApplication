@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using CsvHelper;
 using MongoDB.Driver;
@@ -14,7 +11,8 @@ namespace DataImporter
     {
         private static IMongoClient __client;
         private static IMongoDatabase __database;
-        private static IMongoCollection<OnTimePerformance> __collection;
+        private static HashSet<int> __seenAirlineIds = new HashSet<int>();
+        private static HashSet<int> __seenAirportIds = new HashSet<int>();
 
         public static void Main(string[] args)
         {
@@ -26,34 +24,135 @@ namespace DataImporter
             {
                 Console.WriteLine("Exception: {0}", ex);
             }
-
-            Console.WriteLine("Press Enter");
-            Console.ReadLine();
         }
 
         private static async Task MainAsync(string[] args)
         {
             var connectionString = "mongodb://localhost";
             __client = new MongoClient(connectionString);
-            __database = __client.GetDatabase("Flights");
-            __collection = __database.GetCollection<OnTimePerformance>("OnTimePerformance");
+            __database = __client.GetDatabase("flights");
 
-            await LoadOnTimePerformanceDataAsync();
+            await DropCollectionsAsync();
+            await LoadCollectionsAsync();
         }
 
-        private static async Task LoadOnTimePerformanceDataAsync()
+        private static async Task DropCollectionsAsync()
         {
-            Console.WriteLine("Loading OnTimePerformance files");
+            await __database.DropCollectionAsync("flights");
+            await __database.DropCollectionAsync("airlines");
+            await __database.DropCollectionAsync("airports");
+        }
 
-            await __database.DropCollectionAsync(__collection.CollectionNamespace.CollectionName);
+        private static async Task LoadCollectionsAsync()
+        {
+            Console.WriteLine("Loading data");
+            await LoadFlightsAsync();
+            await LoadAirlinesAsync();
+            await LoadAirportsAsync();
+        }
 
+        private static async Task LoadFlightsAsync()
+        {
             var dataDirectory = FindDataDirectory();
-            var onTimePerformanceDataDirectory = Path.Combine(dataDirectory, "OnTimePerformance");
-
-            foreach (var csvFileName in Directory.GetFiles(onTimePerformanceDataDirectory, "*.csv"))
+            var flightsDirectory = Path.Combine(dataDirectory, "Flights");
+            foreach (var csvFileName in Directory.GetFiles(flightsDirectory, "*.csv"))
             {
-                await LoadOnTimePerformanceDataAsync(csvFileName);
+                await LoadFlightsAsync(csvFileName);
             }
+        }
+
+        private static async Task LoadFlightsAsync(string csvFilename)
+        {
+            Console.WriteLine("Loading {0}", Path.GetFileName(csvFilename));
+
+            var collection = __database.GetCollection<Flight>("flights");
+
+            var batchSize = 1000;
+            using (var csvReader = new CsvReader(new StreamReader(csvFilename)))
+            {
+                var flights = new List<Flight>();
+
+                foreach (var flight  in csvReader.GetRecords<Flight>())
+                {
+                    if (flight.FL_DATE.HasValue)
+                    {
+                        flight.FL_DATE = DateTime.SpecifyKind(flight.FL_DATE.Value, DateTimeKind.Utc);
+                    }
+
+                    if (flight.AIRLINE_ID.HasValue) { __seenAirlineIds.Add(flight.AIRLINE_ID.Value); }
+                    if (flight.ORIGIN_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.ORIGIN_AIRPORT_ID.Value); }
+                    if (flight.DEST_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.DEST_AIRPORT_ID.Value); }
+
+                    flights.Add(flight);
+                    if (flights.Count == batchSize)
+                    {
+                        await collection.InsertManyAsync(flights);
+                        flights.Clear();
+                        Console.Write(".");
+                    }
+                }
+
+                if (flights.Count > 0)
+                {
+                    await collection.InsertManyAsync(flights);
+                }
+            }
+
+            Console.WriteLine();
+        }
+
+        private static async Task LoadAirlinesAsync()
+        {
+            var dataDirectory = FindDataDirectory();
+            var csvFilename = Path.Combine(dataDirectory, "airlines.csv");
+            await LoadAirlinesAsync(csvFilename);
+        }
+
+        private static async Task LoadAirlinesAsync(string csvFilename)
+        {
+            Console.WriteLine("Loading {0}", Path.GetFileName(csvFilename));
+            
+            var airlines = new List<Airline>();
+            using (var csvReader = new CsvReader(new StreamReader(csvFilename)))
+            {
+                foreach (var airline in csvReader.GetRecords<Airline>())
+                {
+                    if (__seenAirlineIds.Contains(airline.Code))
+                    {
+                        airlines.Add(airline);
+                    }
+                }
+            }
+
+            var collection = __database.GetCollection<Airline>("airlines");
+            await collection.InsertManyAsync(airlines);
+        }
+
+        private static async Task LoadAirportsAsync()
+        {
+            var dataDirectory = FindDataDirectory();
+            var csvFilename = Path.Combine(dataDirectory, "airports.csv");
+            await LoadAirportsAsync(csvFilename);
+        }
+
+        private static async Task LoadAirportsAsync(string csvFilename)
+        {
+            Console.WriteLine("Loading {0}", Path.GetFileName(csvFilename));
+
+            var airports = new List<Airport>();
+            using (var csvReader = new CsvReader(new StreamReader(csvFilename)))
+            {
+                foreach (var airport in csvReader.GetRecords<Airport>())
+                {
+                    if (__seenAirportIds.Contains(airport.Code))
+                    {
+                        airports.Add(airport);
+                    }
+                }
+            }
+
+            var collection = __database.GetCollection<Airport>("airports");
+            await collection.InsertManyAsync(airports);
         }
 
         private static string FindDataDirectory()
@@ -68,40 +167,6 @@ namespace DataImporter
             }
 
             return Path.Combine(directory, "Data");
-        }
-
-        private static async Task LoadOnTimePerformanceDataAsync(string csvFilename)
-        {
-            Console.WriteLine("Loading {0}", csvFilename);
-
-            var batchSize = 1000;
-            using (var csvReader = new CsvReader(new StreamReader(csvFilename)))
-            {
-                var batch = new List<OnTimePerformance>();
-
-                foreach (var document  in csvReader.GetRecords<OnTimePerformance>())
-                {
-                    if (document.FL_DATE.HasValue)
-                    {
-                        document.FL_DATE = DateTime.SpecifyKind(document.FL_DATE.Value, DateTimeKind.Utc);
-                    }
-
-                    batch.Add(document);
-                    if (batch.Count == batchSize)
-                    {
-                        await __collection.InsertManyAsync(batch);
-                        batch.Clear();
-                        Console.Write(".");
-                    }
-                }
-
-                if (batch.Count > 0)
-                {
-                    await __collection.InsertManyAsync(batch);
-                }
-            }
-
-            Console.WriteLine();
         }
     }
 }
