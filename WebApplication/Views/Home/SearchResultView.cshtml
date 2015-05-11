@@ -1,0 +1,31 @@
+﻿@model WebApplication.Models.SearchResultViewModel
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+
+<html>
+<head>
+    <meta name="viewport" content="width=device-width" />
+    <title>SearchView</title>
+</head>
+<body>
+    <div>
+        Search Results:
+    </div>
+    <div>
+        @Model.TotalNumberOfFlights total number of flights
+    </div>
+    <div>
+        @Model.TotalNumberOfDelayedFlights total number of delayed flights
+    </div>
+    <div>
+        @Model.AverageDelay.TotalMinutes average delay (in minutes)
+    </div>
+    <div>
+        @Html.ActionLink("New search", "Index")
+    </div>
+</body>
+</html>
