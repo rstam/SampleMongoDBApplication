@@ -5,20 +5,32 @@
     ViewBag.Title = "Flight Delays";
 }
 
-Search flight delay data:
-<p/>
-
 @using (Html.BeginForm("Search", "Home"))
 { 
-    @Html.Label("From:")
-    @Html.TextBox("From")
-    @Html.Label("To:")
-    @Html.TextBox("To")
-    <p/>
-
-    @Html.Label("Carrier:")
-    @Html.TextBox("Carrier")
-    <p/>
-
-    <input type="submit" value="Search" />
+    <div>
+        Search flight delay data:
+    </div>
+    <div>
+        @Html.Label("From Date:")
+        @Html.TextBox("FromDate")
+    </div>
+    <div>
+        @Html.Label("To Date:")
+        @Html.TextBox("ToDate")
+    </div>
+    <div>
+        @Html.Label("Airline:")
+        @Html.DropDownList("AirlineId", Model.Airlines.Select(a => new SelectListItem { Value = a.Id.ToString(), Text = a.Description }), "All")
+    </div>
+    <div>
+        @Html.Label("Origin:")
+        @Html.DropDownList("OriginId", Model.Airports.Select(a => new SelectListItem { Value = a.Id.ToString(), Text = a.Description }), "All")
+    </div>
+    <div>
+        @Html.Label("Destination:")
+        @Html.DropDownList("DestinationId", Model.Airports.Select(a => new SelectListItem { Value = a.Id.ToString(), Text = a.Description }), "All")
+    </div>
+    <div>
+        <input type="submit" value="Search" />
+    </div>
 }
