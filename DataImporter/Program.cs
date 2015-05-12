@@ -34,6 +34,7 @@ namespace DataImporter
 
             await DropCollectionsAsync();
             await LoadCollectionsAsync();
+            await CreateIndexesAsync();
         }
 
         private static async Task DropCollectionsAsync()
@@ -153,6 +154,22 @@ namespace DataImporter
 
             var collection = __database.GetCollection<Airport>("airports");
             await collection.InsertManyAsync(airports);
+        }
+
+        private static async Task CreateIndexesAsync()
+        {
+            Console.WriteLine("Creating indexes");
+
+            var collection = __database.GetCollection<Flight>("flights");
+
+            var indexKeysBuilder = Builders<Flight>.IndexKeys;
+            var indexKeys = indexKeysBuilder
+                .Ascending(f => f.FL_DATE)
+                .Ascending(f => f.AIRLINE_ID)
+                .Ascending(f => f.ORIGIN_AIRPORT_ID)
+                .Ascending(f => f.DEST_AIRPORT_ID);
+
+            await collection.Indexes.CreateOneAsync(indexKeys);
         }
 
         private static string FindDataDirectory()
