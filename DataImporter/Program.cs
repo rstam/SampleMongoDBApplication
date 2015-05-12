@@ -75,16 +75,9 @@ namespace DataImporter
 
                 foreach (var flight  in csvReader.GetRecords<Flight>())
                 {
-                    if (flight.FL_DATE.HasValue)
-                    {
-                        flight.FL_DATE = DateTime.SpecifyKind(flight.FL_DATE.Value, DateTimeKind.Utc);
-                    }
-
-                    if (flight.AIRLINE_ID.HasValue) { __seenAirlineIds.Add(flight.AIRLINE_ID.Value); }
-                    if (flight.ORIGIN_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.ORIGIN_AIRPORT_ID.Value); }
-                    if (flight.DEST_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.DEST_AIRPORT_ID.Value); }
-
+                    PreprocessFlight(flight);
                     flights.Add(flight);
+
                     if (flights.Count == batchSize)
                     {
                         await collection.InsertManyAsync(flights);
@@ -100,6 +93,18 @@ namespace DataImporter
             }
 
             Console.WriteLine();
+        }
+
+        private static void PreprocessFlight(Flight flight)
+        {
+            if (flight.FL_DATE.HasValue)
+            {
+                flight.FL_DATE = DateTime.SpecifyKind(flight.FL_DATE.Value, DateTimeKind.Utc);
+            }
+
+            if (flight.AIRLINE_ID.HasValue) { __seenAirlineIds.Add(flight.AIRLINE_ID.Value); }
+            if (flight.ORIGIN_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.ORIGIN_AIRPORT_ID.Value); }
+            if (flight.DEST_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.DEST_AIRPORT_ID.Value); }
         }
 
         private static async Task LoadAirlinesAsync()
