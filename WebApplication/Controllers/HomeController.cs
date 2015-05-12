@@ -65,60 +65,59 @@ namespace WebApplication.Controllers
         {
             var client = __client.Value;
             var database = client.GetDatabase("flights");
-            var collection = database.GetCollection<BsonDocument>("flights");
+            var collection = database.GetCollection<Flight>("flights");
 
-            var aggregate = collection.Aggregate();
+            var aggregateOfFlight = collection.Aggregate();
+
             var filter = CreateFilter(criteriaModel);
             if (filter != null)
             {
-                aggregate = aggregate.Match(filter);
+                aggregateOfFlight = aggregateOfFlight.Match(filter);
             }
-            aggregate = aggregate.Group(
-                "{" +
-                "    _id : null," +
-                "    TotalNumberOfFlights : { $sum : 1 }," +
-                "    TotalNumberOfDelayedFlights : { $sum : { $cond : { if : { $gt : [\"$ARR_DELAY\", 0] }, then : 1, else : 0 } } }," +
-                "    AverageDelayInMinutes : { $avg : { $cond : { if : { $gt : [\"$ARR_DELAY\", 0] }, then : \"$ARR_DELAY\", else : null } } }" +
-                "}"
-            );
-            var result = await aggregate.SingleAsync();
 
-            return new SearchResultViewModel
-            {
-                TotalNumberOfFlights = result["TotalNumberOfFlights"].ToInt32(),
-                TotalNumberOfDelayedFlights = result["TotalNumberOfDelayedFlights"].ToInt32(),
-                AverageDelayInMinutes = result["AverageDelayInMinutes"].ToDouble()
-            };
+            var aggregateOfSearchResultViewModel = aggregateOfFlight.Group(
+                f => 1,
+                g => new SearchResultViewModel
+                {
+                    TotalNumberOfFlights = g.Count(),
+                    TotalNumberOfDelayedFlights = g.Sum(f => f.ArrivalDelay > 0.0 ? 1 : 0),
+                    AverageDelayInMinutes = (double)g.Sum(f => f.ArrivalDelay > 0.0 ? (double?)f.ArrivalDelay : null)
+                });
+
+            return await aggregateOfSearchResultViewModel.SingleAsync();
         }
 
-        private FilterDefinition<BsonDocument> CreateFilter(SearchCriteriaModel criteriaModel)
+        private FilterDefinition<Flight> CreateFilter(SearchCriteriaModel criteriaModel)
         {
-            var filterBuilder = Builders<BsonDocument>.Filter;
+            var filterBuilder = Builders<Flight>.Filter;
 
-            var clauses = new List<FilterDefinition<BsonDocument>>();
+            var clauses = new List<FilterDefinition<Flight>>();
             if (criteriaModel.FromDate != null)
             {
                 var fromDate = DateTime.SpecifyKind(DateTime.Parse(criteriaModel.FromDate), DateTimeKind.Utc);
-                var clause = filterBuilder.Gte("FL_DATE", fromDate);
+                var clause = filterBuilder.Gte(f => f.FlightDate, fromDate);
                 clauses.Add(clause);
             }
             if (criteriaModel.ToDate != null)
             {
                 var toDate = DateTime.SpecifyKind(DateTime.Parse(criteriaModel.ToDate), DateTimeKind.Utc);
-                var clause = filterBuilder.Lte("FL_DATE", toDate);
+                var clause = filterBuilder.Lte(f => f.FlightDate, toDate);
                 clauses.Add(clause);
             }
             if (criteriaModel.AirlineId != null)
             {
-                var clause = filterBuilder.Eq("AIRLINE_ID", criteriaModel.AirlineId.Value);
+                var clause = filterBuilder.Eq(f => f.AirlineId, criteriaModel.AirlineId.Value);
+                clauses.Add(clause);
             }
             if (criteriaModel.OriginId != null)
             {
-                var clause = filterBuilder.Eq("ORIGIN_AIRPORT_ID", criteriaModel.OriginId.Value);
+                var clause = filterBuilder.Eq(f => f.OriginAirportId, criteriaModel.OriginId.Value);
+                clauses.Add(clause);
             }
             if (criteriaModel.DestinationId != null)
             {
-                var clause = filterBuilder.Eq("DESTINATION_AIRPORT_ID", criteriaModel.DestinationId.Value);
+                var clause = filterBuilder.Eq(f => f.DestinationAirportId, criteriaModel.DestinationId.Value);
+                clauses.Add(clause);
             }
 
             if (clauses.Count > 0)
