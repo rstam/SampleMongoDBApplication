@@ -36,8 +36,6 @@ namespace WebApplication.Controllers
 
             return new IndexViewModel
             {
-                FromDate = null,
-                ToDate = null,
                 Airlines = findAirlinesTask.Result.OrderBy(a => a.Description),
                 Airports = findAirportsTask.Result.OrderBy(a => a.Description)
             };
