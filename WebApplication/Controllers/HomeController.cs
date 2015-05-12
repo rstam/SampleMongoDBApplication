@@ -81,7 +81,7 @@ namespace WebApplication.Controllers
                 {
                     TotalNumberOfFlights = g.Count(),
                     TotalNumberOfDelayedFlights = g.Sum(f => f.ArrivalDelay > 0.0 ? 1 : 0),
-                    AverageDelayInMinutes = (double)g.Sum(f => f.ArrivalDelay > 0.0 ? (double?)f.ArrivalDelay : null)
+                    AverageDelayInMinutes = (double)g.Average(f => f.ArrivalDelay > 0.0 ? (double?)f.ArrivalDelay : null)
                 });
 
             return await aggregateOfSearchResultViewModel.SingleAsync();
