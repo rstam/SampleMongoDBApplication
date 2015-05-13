@@ -102,9 +102,18 @@ namespace DataImporter
                 flight.FL_DATE = DateTime.SpecifyKind(flight.FL_DATE.Value, DateTimeKind.Utc);
             }
 
-            if (flight.AIRLINE_ID.HasValue) { __seenAirlineIds.Add(flight.AIRLINE_ID.Value); }
-            if (flight.ORIGIN_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.ORIGIN_AIRPORT_ID.Value); }
-            if (flight.DEST_AIRPORT_ID.HasValue) { __seenAirportIds.Add(flight.DEST_AIRPORT_ID.Value); }
+            if (flight.AIRLINE_ID.HasValue)
+            {
+                __seenAirlineIds.Add(flight.AIRLINE_ID.Value);
+            }
+            if (flight.ORIGIN_AIRPORT_ID.HasValue)
+            {
+                __seenAirportIds.Add(flight.ORIGIN_AIRPORT_ID.Value);
+            }
+            if (flight.DEST_AIRPORT_ID.HasValue)
+            {
+                __seenAirportIds.Add(flight.DEST_AIRPORT_ID.Value);
+            }
         }
 
         private static async Task LoadAirlinesAsync()
