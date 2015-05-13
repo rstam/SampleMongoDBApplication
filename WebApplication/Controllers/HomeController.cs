@@ -88,7 +88,20 @@ namespace WebApplication.Controllers
         private FilterDefinition<Flight> CreateFilter(SearchCriteriaModel criteriaModel)
         {
             var filterBuilder = Builders<Flight>.Filter;
+            var clauses = CreateClauses(criteriaModel, filterBuilder);
 
+            if (clauses.Count > 0)
+            {
+                return filterBuilder.And(clauses);
+            }
+            else
+            {
+                return null;
+            }
+        }
+
+        private List<FilterDefinition<Flight>> CreateClauses(SearchCriteriaModel criteriaModel, FilterDefinitionBuilder<Flight> filterBuilder)
+        {
             var clauses = new List<FilterDefinition<Flight>>();
             if (criteriaModel.FromDate != null)
             {
@@ -117,15 +130,7 @@ namespace WebApplication.Controllers
                 var clause = filterBuilder.Eq(f => f.DestinationAirportId, criteriaModel.DestinationId.Value);
                 clauses.Add(clause);
             }
-
-            if (clauses.Count > 0)
-            {
-                return filterBuilder.And(clauses);
-            }
-            else
-            {
-                return null;
-            }
+            return clauses;
         }
     }
 }
